@@ -1,4 +1,4 @@
-"""__NAME__领域服务：字段、状态和动作来自业务配置，数据处理骨架由基类复用。"""
+"""分隔规则领域服务：维护各格式的切分转义约定与规则版本，产出规则条目数据集。"""
 from __future__ import annotations
 
 from app.services.base import BaseModuleService

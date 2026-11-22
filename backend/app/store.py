@@ -18,6 +18,12 @@ class Store:
     def module_names(self) -> list[str]:
         return sorted(self._tables)
 
+    def reload_seed(self) -> None:
+        """把全部表恢复成 seed.py 的初始示例数据，供本地重置与测试隔离使用。"""
+        self._tables = {
+            name: [dict(row) for row in rows] for name, rows in SEED_ROWS.items()
+        }
+
     def rows(self, module: str) -> list[dict[str, Any]]:
         return self._tables.setdefault(module, [])
 
