@@ -128,6 +128,29 @@ class ReparseTaskService(BaseModuleService):
             f"重解析单 {task_no} 已完成，重解析 {reparsed_count} 个批次，{handled}"
         ), dict(task)
 
+    def _deliveries_of_batch(self, intake_batch: str) -> list[dict[str, Any]]:
+        """沿真实引用链找出投递批次对应的全部投递记录。
+
+        链路：投递批次 → 解析批次(关联投递批次) → 输出契约(关联批次=批次记录编号)
+              → 投递记录(关联契约)。
+        """
+        batch_nos = {
+            str(b.get("批次记录编号")) for b in store.rows("parse_batch")
+            if str(b.get("关联投递批次")) == intake_batch
+        }
+        contract_nos = {
+            str(c.get("契约编号")) for c in store.rows("output_contract")
+            if str(c.get("关联批次")) in batch_nos
+        }
+        return [
+            d for d in store.rows("result_deliver")
+            if str(d.get("关联契约")) in contract_nos
+        ]
+
+    def affected_deliveries(self, intake_batch: str) -> list[str]:
+        """输出重解析会影响到的投递记录编号，供受影响投递数核对。"""
+        return [str(d.get("投递记录编号")) for d in self._deliveries_of_batch(intake_batch)]
+
     def _apply_coverage_strategy(self, strategy: str, affected: list[str],
                                  task_no: str) -> str:
         """执行覆盖策略对旧投递记录的处置。
@@ -135,17 +158,9 @@ class ReparseTaskService(BaseModuleService):
         旧投递保留：旧记录状态不变，仅追加归档标记，下游可同时看到新旧两版。
         被新记录替代：旧记录标记为已作废，下游只看到新版投递。
         """
-        deliver_rows = store.rows("result_deliver")
         touched = 0
         for batch_no in affected:
-            for record in deliver_rows:
-                contract_no = str(record.get("关联契约") or "")
-                contract = next(
-                    (c for c in store.rows("output_contract")
-                     if c.get("契约编号") == contract_no), None)
-                linked = str(contract.get("关联批次") or "") if contract else ""
-                if linked != batch_no and contract_no != f"OC-{batch_no}":
-                    continue
+            for record in self._deliveries_of_batch(batch_no):
                 touched += 1
                 if strategy == self.KEEP_OLD:
                     record["归档标记"] = f"由 {task_no} 重解析产生新版本，旧投递保留可查"

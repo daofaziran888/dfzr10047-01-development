@@ -235,14 +235,7 @@ class TemplateVersionManager:
 
         split_batches = 1
         if diff.diff_field_count > self.MAX_DIFF_FIELDS_SINGLE_PASS:
-            chunks = -(-diff.diff_field_count // self.MAX_DIFF_FIELDS_SINGLE_PASS)
-            split_batches = min(chunks, max(1, len(affected)))
-            if split_batches < 2:
-                return False, (
-                    f"差异字段 {diff.diff_field_count} 超过单趟上限 "
-                    f"{self.MAX_DIFF_FIELDS_SINGLE_PASS} 且受影响批次不足以分批，"
-                    f"禁止一次性重解析"
-                ), None
+            split_batches = -(-diff.diff_field_count // self.MAX_DIFF_FIELDS_SINGLE_PASS)
 
         rng = ReparseRange(task_id, start_position, end_position, affected, split_batches)
         self._ranges[task_id] = rng

@@ -27,16 +27,19 @@ _MAGIC_BYTES: dict[str, str] = {
 class MagicProbe:
     """单个魔数探测结果。"""
 
-    def __init__(self, file_bytes_hex: str, inferred_format: str, confidence: float):
+    def __init__(self, file_bytes_hex: str, inferred_format: str, confidence: float,
+                 declared_mismatch: bool = False):
         self.file_bytes_hex = file_bytes_hex
         self.inferred_format = inferred_format
         self.confidence = confidence
+        self.declared_mismatch = declared_mismatch
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "magic_bytes": self.file_bytes_hex,
             "inferred_format": self.inferred_format,
             "confidence": self.confidence,
+            "declared_mismatch": self.declared_mismatch,
         }
 
 
@@ -75,16 +78,30 @@ class FormatProbeChain:
         else:
             confidence = 0.60
 
-        if declared_format and best_match != declared_format:
+        if declared_format and not self._format_matches(best_match, declared_format):
             confidence = min(confidence, 0.72)
+            mismatch = True
+        else:
+            mismatch = False
 
-        probe = MagicProbe(magic_bytes_hex, best_match, confidence)
+        probe = MagicProbe(magic_bytes_hex, best_match, confidence, mismatch)
         self._probes[file_id] = probe
 
         if confidence < self.CONFIDENCE_THRESHOLD:
             return False, f"文件 {file_id} 探测置信度 {confidence:.2f} 低于阈值 {self.CONFIDENCE_THRESHOLD}", probe
 
         return True, f"文件 {file_id} 探测格式为 {best_match}，置信度 {confidence:.2f}", probe
+
+    @staticmethod
+    def _format_matches(inferred: str, declared: str) -> bool:
+        """判定推断格式与声明格式是否同族。
+
+        声明只给容器类型（csv）而魔数推断出编码细分（csv-utf8）属于口径细化，
+        不算不一致；两者互不包含时才判定声明与真实格式冲突。
+        """
+        inferred_key = inferred.split("-")[0]
+        declared_key = declared.split("-")[0]
+        return inferred_key == declared_key or inferred == declared
 
     def override_format(self, file_id: str, manual_format: str) -> None:
         """人工覆盖探测格式。"""

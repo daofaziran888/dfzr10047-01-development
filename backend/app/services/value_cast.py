@@ -18,6 +18,22 @@ class ValueCastService(BaseModuleService):
     ACTION_RULES = {"启动转型": "执行中", "确认完成": "已完成", "登记失败": "存在失败"}
     NEGATIVE_ACTIONS = ["登记失败"]
 
+    # 业务侧用 yyyy-MM-dd 约定日期格式，转型前需翻译成 strptime 的格式串
+    PATTERN_TOKENS = (("yyyy", "%Y"), ("yy", "%y"), ("MM", "%m"), ("dd", "%d"),
+                      ("HH", "%H"), ("mm", "%M"), ("ss", "%S"))
+
+    @classmethod
+    def to_strptime_pattern(cls, pattern: str) -> str:
+        """把 yyyy-MM-dd HH:mm:ss 这类业务约定翻译成 strptime 格式串。"""
+        if not pattern:
+            return "%Y-%m-%d %H:%M:%S"
+        if "%" in pattern:
+            return pattern
+        translated = pattern
+        for token, replacement in cls.PATTERN_TOKENS:
+            translated = translated.replace(token, replacement)
+        return translated
+
     def cast_value(self, raw: Any, target_type: str, date_pattern: str = "",
                    precision: int = 0, null_fill: Any = None) -> tuple[bool, Any, str]:
         """单值转型：失败时返回原因，不用空值填充伪装成功。"""
@@ -34,7 +50,7 @@ class ValueCastService(BaseModuleService):
                 value = float(text)
                 return True, (round(value, precision) if precision else value), ""
             if target_type in ("date", "datetime", "datetime64"):
-                pattern = date_pattern or "%Y-%m-%d %H:%M:%S"
+                pattern = self.to_strptime_pattern(date_pattern)
                 return True, datetime.strptime(text.replace("T", " "), pattern).isoformat(), ""
             if target_type == "bool":
                 lowered = text.lower()

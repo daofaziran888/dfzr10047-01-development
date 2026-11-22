@@ -52,7 +52,10 @@ class FormatProbeService(BaseModuleService):
         else:
             inferred, confidence, compressed = matched
 
-        mismatch = bool(declared_format) and inferred != declared_format
+        mismatch = (
+            bool(declared_format)
+            and inferred.split("-")[0] != declared_format.split("-")[0]
+        )
         if mismatch:
             confidence = min(confidence, 0.72)
 
@@ -137,7 +140,7 @@ class FormatProbeService(BaseModuleService):
         return False, f"探测结论 {probe_no} 不存在"
 
     def mismatch_batches(self) -> list[dict[str, Any]]:
-        """列出声明格式与探测格式不一致的批次，供投递审计留痕。"""
+        """列出声明格式与探测格式跨族不一致的批次，供投递审计留痕。"""
         return [
             {
                 "探测编号": r.get("探测编号"),
@@ -147,5 +150,6 @@ class FormatProbeService(BaseModuleService):
                 "置信度": r.get("置信度"),
             }
             for r in store.rows(self.MODULE)
-            if r.get("声明格式") and r.get("声明格式") != r.get("推断格式")
+            if r.get("声明格式")
+            and str(r.get("声明格式")).split("-")[0] != str(r.get("推断格式") or "").split("-")[0]
         ]

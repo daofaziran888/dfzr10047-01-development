@@ -149,8 +149,12 @@ class StructureSniffer:
 
         rule.hit_batches.append(batch_id)
         split_rows = [rule.split_line(line) for line in sample_lines if line.strip()]
-        if not split_rows:
-            result = SniffResult(batch_id, 0, 0, [], [], False, 0.0, 1)
+        if len(split_rows) < 2:
+            # 样本不足两行无法验证列结构一致性，判定低置信不得启动解析
+            result = SniffResult(
+                batch_id, len(split_rows),
+                len(split_rows[0]) if split_rows else 0,
+                [], [], False, 0.30, 1)
             self._sniffs[batch_id] = result
             return False, result
 
@@ -167,11 +171,14 @@ class StructureSniffer:
                 v.strip() and not v.strip().replace(".", "").replace("-", "").isdigit()
                 for v in first if v.strip()
             )
-            rest_types_stable = all(
+            # 数据行里至少有一列是数值/日期型，说明首行是列名而非数据
+            data_has_typed_column = any(
                 self._guess_type([r[i] for r in rest if i < len(r)]) in ("int", "float", "datetime")
                 for i in range(min(column_count, 4))
             ) if column_count else False
-            first_row_is_header = bool(first_is_alpha and (rest_types_stable or column_count <= 2))
+            first_row_is_header = bool(
+                first_is_alpha and (data_has_typed_column or column_count <= 2)
+            )
 
         data_rows = split_rows[1:] if first_row_is_header else split_rows
         column_names = (

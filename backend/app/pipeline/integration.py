@@ -77,7 +77,7 @@ class ParsePipelineOrchestrator:
     # ------------------------------------------------------------------
     def link1_intake_to_deliver(
         self, batch_id: str, channel: str, filename: str, magic_hex: str,
-        declared_fmt: str, size_bytes: int, arrive_time: str,
+        declared_format: str, size_bytes: int, arrive_time: str,
         parser_chain: list[str], template_id: str,
         field_defs: list[dict[str, Any]], raw_lines: list[dict[str, str]],
         contract_columns: list[str], mandatory: list[str], min_rows: int,
@@ -87,11 +87,11 @@ class ParsePipelineOrchestrator:
         _append_row("file_intake", {
             "批次编号": batch_id, "来源渠道": channel, "原始文件名": filename,
             "字节大小": str(size_bytes), "投递时间": arrive_time,
-            "文件后缀": filename[filename.rfind("."):], "声明格式": declared_fmt,
+            "文件后缀": filename[filename.rfind("."):], "声明格式": declared_format,
             "接收节点": "node-01",
         }, status="已接收", pending=True)
 
-        ok, msg, probe = self.probe.probe_format(batch_id, magic_hex, declared_fmt)
+        ok, msg, probe = self.probe.probe_format(batch_id, magic_hex, declared_format)
         self._log(link, "format_probe", "ok" if ok else f"FAIL:{msg}")
         resolved = self.probe.get_resolved_format(batch_id)
         _append_row("format_probe", {
@@ -104,7 +104,7 @@ class ParsePipelineOrchestrator:
         self.route.register_parsers(resolved, parser_chain)
         routed, decision = self.route.route(
             f"PR-{batch_id}", batch_id, resolved,
-            f"魔数特征+声明格式{declared_fmt}", arrive_time)
+            f"魔数特征+声明格式{declared_format}", arrive_time)
         self._log(link, "parser_route", "ok" if routed else "FAIL:no-parser")
         if not routed:
             _append_row("parse_batch", {

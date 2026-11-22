@@ -186,8 +186,12 @@ class TransformStage:
         if not isinstance(item, dict):
             return [{target_columns[0]: item, **{c: "" for c in target_columns[1:]}}]
         if len(target_columns) == 1:
+            key = target_columns[0]
+            # 目标列名与节点字段同名时直接取值，否则退化为键值串接
+            if key in item:
+                return [{key: item[key]}]
             joined = ";".join(f"{k}={v}" for k, v in item.items())
-            return [{target_columns[0]: joined}]
+            return [{key: joined}]
         return [{col: item.get(col, "") for col in target_columns}]
 
     # ---------- 取值转型 ----------
