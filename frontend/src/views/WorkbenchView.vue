@@ -28,6 +28,8 @@
       </span>
     </p>
 
+    <RecollectGapPanel v-if="moduleKey === 'parse_watermark'" />
+
     <form class="filter-bar" @submit.prevent="reload">
       <label v-for="field in filterFields" :key="field" class="filter-item">
         <span>{{ field }}</span>
@@ -103,6 +105,7 @@ import {
   moduleMeta,
   runAction as applyAction,
 } from '@/api/backend-service'
+import RecollectGapPanel from '@/components/RecollectGapPanel.vue'
 import type { EntryRow } from '@/data/types'
 
 const props = defineProps<{ moduleKey: string }>()

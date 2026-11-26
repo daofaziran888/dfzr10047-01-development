@@ -19,6 +19,7 @@ from app.services.output_contract import OutputContractService
 from app.services.result_deliver import ResultDeliverService
 from app.services.parse_watermark import ParseWatermarkService
 from app.services.reparse_task import ReparseTaskService
+from app.services.recollect_claim import RecollectClaimService
 from app.services.dup_fingerprint import DupFingerprintService
 from app.services.sample_review import SampleReviewService
 from app.services.parse_metric import ParseMetricService
@@ -43,6 +44,7 @@ SERVICES: dict[str, BaseModuleService] = {
     "result_deliver": ResultDeliverService(),
     "parse_watermark": ParseWatermarkService(),
     "reparse_task": ReparseTaskService(),
+    "recollect_claim": RecollectClaimService(),
     "dup_fingerprint": DupFingerprintService(),
     "sample_review": SampleReviewService(),
     "parse_metric": ParseMetricService(),

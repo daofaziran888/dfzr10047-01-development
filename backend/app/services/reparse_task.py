@@ -124,9 +124,20 @@ class ReparseTaskService(BaseModuleService):
         task["abnormal"] = False
         task["受影响投递数"] = str(reparsed_count)
         task["重解析结论"] = f"{conclusion}；{handled}"
-        return True, (
-            f"重解析单 {task_no} 已完成，重解析 {reparsed_count} 个批次，{handled}"
-        ), dict(task)
+        synced = self._sync_recollect_ledger(task_no, task["重解析结论"])
+        message = f"重解析单 {task_no} 已完成，重解析 {reparsed_count} 个批次，{handled}"
+        if synced:
+            message += f"；结论已同步 {len(synced)} 张补采领办单"
+        return True, message, dict(task)
+
+    @staticmethod
+    def _sync_recollect_ledger(task_no: str, conclusion: str) -> list[dict[str, Any]]:
+        """把重解析确认结论同步到补采执行台账（由补采领办单签发而来的任务）。"""
+        from app.services import SERVICES  # 延迟导入，避免服务注册期循环依赖
+        recollect = SERVICES.get("recollect_claim")
+        if recollect is None or not hasattr(recollect, "sync_reparse_conclusion"):
+            return []
+        return recollect.sync_reparse_conclusion(task_no, conclusion)
 
     def _deliveries_of_batch(self, intake_batch: str) -> list[dict[str, Any]]:
         """沿真实引用链找出投递批次对应的全部投递记录。
